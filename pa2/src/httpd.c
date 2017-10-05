@@ -11,6 +11,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+char webpage[] =
+"HTTP/1.1 200 OK\r\n"
+"Content-type: text/html; charset=UTF -8\r\n\r\n"
+"<!DOCTYPE html>\r\n"
+"<html>\r\n"
+"<body><h1>An IP address should be here, plus the port number</h1><br>\r\n"
+"</body></html>\r\n";
 
 int main(int argc, char *argv[])
 {
@@ -98,7 +105,7 @@ int main(int argc, char *argv[])
 		
 		int fdsend = open(url, O_RDONLY);		
 		int nread;
-
+/*
 		sprintf(buff2, "%s"
 				"Content-type: %s\r\n\r\n", "HTTP/1.1 200 OK\r\n",
 
@@ -109,14 +116,14 @@ int main(int argc, char *argv[])
 				"</body>"
 				"</html>");
 		write(connfd, buff2, strlen(buff2));	
-		
+	*/	
 				
-		while ( (nread = read(fdsend, buff, sizeof(buff))) > 0)
+		while ( (nread = read(fdsend, webpage, sizeof(webpage))) > 0)
     		{
-        		write(connfd, buff, nread);   
+        		write(connfd, webpage, nread);   
     		}
 
-		send(connfd, buff2, strlen(buff2), 0);
+		send(connfd, webpage, strlen(webpage), 0);
 		close(fdsend); 
 	}
 }
