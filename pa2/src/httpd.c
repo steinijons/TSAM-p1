@@ -7,13 +7,25 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <glib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 int main(int argc, char *argv[])
 {
  	int sockfd , port;
     	struct sockaddr_in server, client;
     	char message[512];
+
 	
+	
+	for(int i = 0; i < argc; i++)
+	{
+		printf("%s",argv[i]);
+	}	
+
+
 	if(argc == 1)
 	{
 		printf("warning disabled!!");
@@ -25,7 +37,7 @@ int main(int argc, char *argv[])
 
 	if(sockfd < 0)
 	{
-		perror("error: bind");
+		perror("error: can't open socket");
 		exit(1);
 	}
 
@@ -39,7 +51,7 @@ int main(int argc, char *argv[])
 
     	if(bind(sockfd, (struct sockaddr *) &server, (socklen_t) sizeof(server)))
 	{
-		perror("error: bind");
+		perror("error: can't bind socket");
 		exit(1);
 	}
 
@@ -48,26 +60,63 @@ int main(int argc, char *argv[])
     	listen(sockfd, 1);
 
 	for (;;) {
+		FILE *fp;
+		char buff[2048];
+		char buff2[200];
+		char *str, *url;
+		
         	// We first have to accept a TCP connection, connfd is a fresh
         	// handle dedicated to this connection.
         	socklen_t len = (socklen_t) sizeof(client);
         	int connfd = accept(sockfd, (struct sockaddr *) &client, &len);
+		
+		if(connfd == -1)
+		{
+			perror("Error: connection failed");
+		}
+			
+		fp = fdopen(connfd, "r");
+		//read the first line and check what request we are suppose to handle
+		
+		str = fgets(buff, sizeof(buff), fp);		
+		fprintf(stderr, "Request line from client: %s\n", str);
+		//Get the request
+		str = strtok(str, " \r\n");
+		fprintf(stderr, "Request: %s\n", str);
+		//Get the url from client
+		url = strtok(NULL, " \r\n");
+		if(url == NULL)
+		{
+			fprintf(stderr, "No URL\n");
+		}		
 
-		// Receive from connfd, not sockfd.
-        	ssize_t n = recv(connfd, message, sizeof(message) - 1, 0);
+		if(url[0]  == '/')
+		{
+			url = &url[1];
+		}	
+		fprintf(stderr, "url: %s\n", url);
+		
+		int fdsend = open(url, O_RDONLY);		
+		int nread;
 
+		sprintf(buff2, "%s"
+				"Content-type: %s\r\n\r\n", "HTTP/1.1 200 OK\r\n",
 
-		message[n] = '\0';
-        	fprintf(stdout, "Received:\n%s\n", message);
+				"<html>"
+				"<header><title>This is title</title></header>"
+				"<body>"
+				"Hello World"
+				"</body>"
+				"</html>");
+		write(connfd, buff2, strlen(buff2));	
+		
+				
+		while ( (nread = read(fdsend, buff, sizeof(buff))) > 0)
+    		{
+        		write(connfd, buff, nread);   
+    		}
 
-		// Convert message to upper case.
-        	for (int i = 0; i < n; ++i) message[i] = toupper(message[i]);
-
-		// Send the message back.
-        	send(connfd, message, (size_t) n, 0);
-
-		// Close the connection.
-        	shutdown(connfd, SHUT_RDWR);
-        	close(connfd);
-    	}
+		send(connfd, buff2, strlen(buff2), 0);
+		close(fdsend); 
+	}
 }
