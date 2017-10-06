@@ -81,7 +81,9 @@ int main(int argc, char *argv[])
 		{
 			perror("Error: connection failed");
 		}
-			
+		
+		/*get info from client */		
+	
 		fp = fdopen(connfd, "r");
 		//read the first line and check what request we are suppose to handle
 		
@@ -103,6 +105,23 @@ int main(int argc, char *argv[])
 		}	
 		fprintf(stderr, "url: %s\n", url);
 		
+		/*finished getting info from client*/
+
+		/*Make the Log file*/
+		FILE *file;
+		time_t time;
+		char LogBuffer[1024];
+		
+		file = fopen("x.log", "a+");
+		if(file == NULL) {printf("error");}
+			
+		strcat(LogBuffer, asctime(localtime(&time)));
+		
+		fputs(LogBuffer, file);
+
+		fclose(file);
+
+		/*Finished making adding to log*/
 		int fdsend = open(url, O_RDONLY);		
 		int nread;
 /*
