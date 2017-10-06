@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,19 +12,22 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-char webpage[] =
-"HTTP/1.1 200 OK\r\n"
-"Content-type: text/html; charset=UTF -8\r\n\r\n"
-"<!DOCTYPE html>\r\n"
-"<html>\r\n"
-"<body><h1>An IP address should be here, plus the port number</h1><br>\r\n"
-"</body></html>\r\n";
+char webpage_firstPart[] =
+			"HTTP/1.1 200 OK\r\n"
+			"Content-type: text/html; charset=UTF -8\r\n\r\n"
+			"<!DOCTYPE html>\r\n"
+			"<html>\r\n"
+				"<body><h1>";
+
+char webpage_secondPart[] =
+				"</h1><br>\r\n"
+			"</body></html>\r\n";
 
 int main(int argc, char *argv[])
 {
  	int sockfd , port;
     	struct sockaddr_in server, client;
-    	char message[512];
+    	//char message[512];
 
 	
 	
@@ -69,7 +73,6 @@ int main(int argc, char *argv[])
 	for (;;) {
 		FILE *fp;
 		char buff[2048];
-		char buff2[200];
 		char *str, *url;
 		
         	// We first have to accept a TCP connection, connfd is a fresh
@@ -106,43 +109,68 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "url: %s\n", url);
 		
 		/*finished getting info from client*/
-
+		
+		/*Function*/
 		/*Make the Log file*/
 		FILE *file;
-		time_t time;
-		char LogBuffer[1024];
-		
-		file = fopen("x.log", "a+");
+		time_t timestamp = time(NULL);
+    		char responseCode[30];
+
+		file = fopen("Logger.log", "a+");		
 		if(file == NULL) {printf("error");}
 			
-		strcat(LogBuffer, asctime(localtime(&time)));
-		
-		fputs(LogBuffer, file);
+		fprintf(file, "%s"  ,ctime(&timestamp));
+		//vantar ip address
+		fprintf(file, " : %d", port);
+		fprintf(file, " : %s" , str);
+		fprintf(file, " : %s" , url);
+
+		if(strcmp(str,"GET") == 0 || strcmp(str,"POST")  == 0 || strcmp(str, "HEAD") == 0)
+		{
+			strcat(responseCode, "200 OK");	
+		}
+		else
+		{
+			strcat(responseCode, "400 error");
+		}
+		fprintf(file, " : %s", responseCode);
 
 		fclose(file);
+		
+		/*Finished adding to log*/
+		
+		/*Handle different types of requests*/
 
-		/*Finished making adding to log*/
-		int fdsend = open(url, O_RDONLY);		
-		int nread;
+		char buffer[2048];  
+
+		if(strcmp(str, "GET") == 0)
+		{
+			printf("Kemst inni get");
+			strcpy(buffer, webpage_firstPart);
+			strcat(buffer, "IP ADDRESS");
+			strcat(buffer, webpage_secondPart);
+			printf("Sending: %s\n", buffer);
+		
+			send(connfd, buffer, strlen(buffer), 0);
+		}
+		else if(strcmp(str, "POST") == 0)
+		{
+			send(connfd, buffer, strlen(buffer), 0);
+		}
+		else if(strcmp(str, "HEAD") == 0)
+		{
+			send(connfd, buffer, strlen(buffer), 0);
+		}
 /*
-		sprintf(buff2, "%s"
-				"Content-type: %s\r\n\r\n", "HTTP/1.1 200 OK\r\n",
-
-				"<html>"
-				"<header><title>This is title</title></header>"
-				"<body>"
-				"Hello World"
-				"</body>"
-				"</html>");
-		write(connfd, buff2, strlen(buff2));	
-	*/	
+		int fdsend = open(url, O_RDONLY);		
+		int nread;	
 				
-		while ( (nread = read(fdsend, webpage, sizeof(webpage))) > 0)
+		while((nread = read(fdsend, webpage, sizeof(webpage))) > 0)
     		{
         		write(connfd, webpage, nread);   
     		}
 
-		send(connfd, webpage, strlen(webpage), 0);
-		close(fdsend); 
+		send(connfd, webpage, strlen(webpage), 0);*/
+//		close(fdsend); 
 	}
 }
