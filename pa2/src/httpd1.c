@@ -27,16 +27,9 @@ int main(int argc, char *argv[])
 {
  	int sockfd , port;
     	struct sockaddr_in server, client;
-    	//char message[512];
+	char message[1024];
 	char *ipAddr;
 	
-	
-	for(int i = 0; i < argc; i++)
-	{
-		printf("%s",argv[i]);
-	}	
-
-
 	if(argc == 1)
 	{
 		printf("warning disabled!!");
@@ -75,26 +68,43 @@ int main(int argc, char *argv[])
 		char buff[2048];
 		char *str, *url;
 		
+				
+
         	// We first have to accept a TCP connection, connfd is a fresh
         	// handle dedicated to this connection.
         	socklen_t len = (socklen_t) sizeof(client);
         	int connfd = accept(sockfd, (struct sockaddr *) &client, &len);
 		ipAddr = inet_ntoa(client.sin_addr);
+		
+		read(sockfd, buff, 2048);
+		
+/*	
+		ssize_t n = recv(connfd, message, sizeof(message) - 1, 0);
+        	if (n == -1) {
+            		perror("recv");
+            		exit(EXIT_FAILURE);
+       		}
 
+        	message[n] = '\0';
+  	     	fprintf(stdout, "Received:\n%s\n", message);
+	
+		char *body;
+		body = strstr(message, "\n\r\n\r");			
+		
+		printf("print out body %s", body);		
+*/
 		if(connfd == -1)
 		{
 			perror("Error: connection failed");
 		}
-		
+		printf("Connected to client...\n");
 		/*get info from client */		
 	
-		fp = fdopen(connfd, "r");
-		//read the first line and check what request we are suppose to handle
-		
-		str = fgets(buff, sizeof(buff), fp);		
-		fprintf(stderr, "Request line from client: %s\n", str);
+		fp = fdopen(connfd, "r");		
+	
 		//Get the request
-		str = strtok(str, " \r\n");
+		
+		str = strtok((fgets(buff, sizeof(buff), fp)), " \r\n");
 		fprintf(stderr, "Request: %s\n", str);
 		//Get the url from client
 		url = strtok(NULL, " \r\n");
@@ -102,16 +112,17 @@ int main(int argc, char *argv[])
 		{
 			fprintf(stderr, "No URL\n");
 		}		
-
+			
 		if(url[0]  == '/')
 		{
 			url = &url[1];
 		}	
 		fprintf(stderr, "url: %s\n", url);
 		
+		fclose(fp);
 		/*finished getting info from client*/
 		
-		/*Function*/
+		/*Function  Logger()*/
 		/*Make the Log file*/
 		FILE *file;
 		time_t timestamp = time(NULL);
@@ -123,9 +134,6 @@ int main(int argc, char *argv[])
 		fprintf(file, "%s"  ,ctime(&timestamp));
 		fprintf(file, " : %s", ipAddr);
 		fprintf(file, " : %d", port);
-		
-		//það vantar held ég einhverjar feirri upplýsingar í loggerinn
-
 		fprintf(file, " : %s" , str);
 		fprintf(file, " : %s" , url);
 
@@ -144,18 +152,18 @@ int main(int argc, char *argv[])
 		/*Finished adding to log*/
 		
 		/*Handle different types of requests*/
-
-		char buffer[2048];  
 		
+		//get the body from POST
+	
+		char buffer[2000];	
+	
+		strcpy(buffer, webpage_firstPart);		
 
 		if(strcmp(str, "GET") == 0)
 		{
-			strcpy(buffer, webpage_firstPart);
-			printf("Kemst inni get");
-			strcat(buffer, ipAddr);
-
-			//her vantar meira til að skila
-
+			strcat(buffer, "127.0.0.1");
+			strcat(buffer, url);
+		//	snprintf(buffer, sizeof(buffer),"%d", port);
 			strcat(buffer, webpage_secondPart);
 			printf("Sending: %s\n", buffer);
 		
@@ -163,25 +171,16 @@ int main(int argc, char *argv[])
 		}
 		else if(strcmp(str, "POST") == 0)
 		{
-			printf("Trying POST request\n");
+			strcat(buffer, "127.0.0.1");
+			strcat(buffer, url);
 			
-			//Hérna er eitthvað að, fæ inn post skilaboð (nota postman til að geraþað sem er addon í chrome)
-			//er að reyna aðskilja POST skilaboðin frá hinu en næ því ekki(það er pælingin með þessu g_strsplit dóti
-			//gísli náði að gera þetta einhvernveginn öðruvísi
-	
-			char** split_buffer = g_strsplit(buff, "\r\n\r\n", 2);
-			strcpy(buffer, webpage_firstPart);
-			strcat(buffer, split_buffer[1]);
+//			strcat(buffer, body);
+
 			strcat(buffer, webpage_secondPart);
-			printf("finished with POST request: sending....\n");
 			send(connfd, buffer, strlen(buffer), 0);
 		}
 		else if(strcmp(str, "HEAD") == 0)
 		{
-			
-			//Vantar alveg
-
-			
 			send(connfd, buffer, strlen(buffer), 0);
 		}
 /*
